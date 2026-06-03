@@ -52,10 +52,8 @@ pids/
 *.seed
 
 # Uploaded / generated user data (should never leak into git)
-storage/uploads/
-storage/generated/
-storage/tmp/
-uploads/
+
+
 tmp/
 
 # IDE / OS

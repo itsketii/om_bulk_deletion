@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+
+# Seeded plaintext admin password
+admin-credentials.txt
+admin-credentials*.txt
+
+# Logs & runtime
+logs/
+*.log
+npm-debug.log*
+pids/
+*.pid
+
+# Uploaded / generated user data
+storage/uploads/
+storage/generated/
+storage/tmp/
+
+# Cache / build
+.cache/
+coverage/
+dist/
+build/
+*.tsbuildinfo
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

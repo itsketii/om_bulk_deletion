@@ -4,6 +4,7 @@ import type {
   BulkExecution,
   BulkExecutionLog,
   BulkExecutionStatus,
+  BulkReportKind,
 } from "@/types/bulk";
 
 type ApiEnvelope<T> = { success: boolean; message?: string; data: T };
@@ -56,4 +57,14 @@ export async function getBulkExecutionLog(
     `/bulk/${id}/log`,
   );
   return data.data;
+}
+
+export async function downloadBulkReport(
+  id: number | string,
+  kind: BulkReportKind,
+): Promise<Blob> {
+  const { data } = await apiClient.get<Blob>(`/bulk/${id}/download/${kind}`, {
+    responseType: "blob",
+  });
+  return data;
 }

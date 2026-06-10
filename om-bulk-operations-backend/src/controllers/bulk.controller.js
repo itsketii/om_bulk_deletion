@@ -135,11 +135,35 @@ const getExecutionLog = async (req, res, next) => {
     }
 };
 
+const downloadExecutionReport = async (req, res, next) => {
+
+    try {
+
+        const { absolutePath, filename } =
+            await bulkService.getExecutionReport({
+                id: req.params.id,
+                userId: req.user.id,
+                role: req.user.role,
+                kind: req.params.kind
+            });
+
+        return res.download(absolutePath, filename, (err) => {
+            if (err && !res.headersSent) {
+                return next(err);
+            }
+        });
+
+    } catch (error) {
+        return handleServiceError(error, res, next);
+    }
+};
+
 module.exports = {
     executeBulk,
     listExecutions,
     listExecutionsByUpload,
     getExecution,
     getExecutionStatus,
-    getExecutionLog
+    getExecutionLog,
+    downloadExecutionReport
 };

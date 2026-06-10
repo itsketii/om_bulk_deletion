@@ -11,6 +11,8 @@ const bulkExecutionRepository = require(
     '../repositories/bulkExecution.repository'
 );
 
+const bulkReportService = require('./bulkReport.service');
+
 const {
     BULK_STATUS,
     BULK_CURRENCIES,
@@ -259,6 +261,16 @@ const toExecutionSummary = (execution) => {
         startedAt: execution.started_at,
         completedAt: execution.completed_at,
         lastLogUpdate: execution.last_log_update,
+        successFile: execution.success_file || null,
+        failedFile: execution.failed_file || null,
+        successCount: execution.success_count == null
+            ? null
+            : Number(execution.success_count),
+        failedCount: execution.failed_count == null
+            ? null
+            : Number(execution.failed_count),
+        hasSuccessReport: Boolean(execution.success_file),
+        hasFailedReport: Boolean(execution.failed_file),
         createdAt: execution.createdAt,
         updatedAt: execution.updatedAt
     };
@@ -377,6 +389,87 @@ const getExecutionLog = async ({ id, userId, role }) => {
     };
 };
 
+const generateExecutionReports = async (execution) => {
+
+    try {
+        const result = await bulkReportService.generateReportsFromLog(
+            execution.log_file
+        );
+
+        await bulkExecutionRepository.updateById(execution.id, {
+            success_file: result.successFile,
+            failed_file: result.failedFile,
+            success_count: result.successCount,
+            failed_count: result.failedCount
+        });
+
+        return result;
+    } catch (err) {
+        console.error(
+            `[bulk-monitor] failed to generate reports for execution ${execution.id}`,
+            err
+        );
+        return null;
+    }
+};
+
+const REPORT_KINDS = {
+    success: 'success',
+    failed: 'failed'
+};
+
+const getExecutionReport = async ({ id, userId, role, kind }) => {
+
+    if (!REPORT_KINDS[kind]) {
+        const error = new Error('Invalid report kind');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    const execution = await loadExecutionWithOwnership({ id, userId, role });
+
+    if (execution.status !== BULK_STATUS.COMPLETED) {
+        const error = new Error(
+            'Reports are only available after the bulk execution is COMPLETED'
+        );
+        error.statusCode = 409;
+        throw error;
+    }
+
+    let filePath = kind === REPORT_KINDS.success
+        ? execution.success_file
+        : execution.failed_file;
+
+    if (!filePath) {
+        const result = await generateExecutionReports(execution);
+
+        if (!result) {
+            const error = new Error('Report not available');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        filePath = kind === REPORT_KINDS.success
+            ? result.successFile
+            : result.failedFile;
+    }
+
+    const absolutePath = path.resolve(filePath);
+
+    try {
+        await fsp.access(absolutePath, fs.constants.R_OK);
+    } catch {
+        const error = new Error('Report file no longer available');
+        error.statusCode = 410;
+        throw error;
+    }
+
+    const base = path.basename(execution.log_file).replace(/\.log$/i, '');
+    const filename = `${base}.${kind}.csv`;
+
+    return { absolutePath, filename };
+};
+
 const updateRunningStatuses = async () => {
 
     const running = await bulkExecutionRepository.findByStatus(
@@ -399,6 +492,9 @@ const updateRunningStatuses = async () => {
                     completed_at: new Date(),
                     last_log_update: new Date(mtimeMs)
                 });
+
+                await generateExecutionReports(execution);
+
                 updated.push({ id: execution.id, status: BULK_STATUS.COMPLETED });
             } else {
                 await bulkExecutionRepository.updateById(execution.id, {
@@ -426,6 +522,7 @@ module.exports = {
     getExecution,
     getExecutionStatus,
     getExecutionLog,
+    getExecutionReport,
     updateRunningStatuses,
     toExecutionSummary
 };

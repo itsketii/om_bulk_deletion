@@ -172,17 +172,32 @@ function UploadRow({ upload }: { upload: Upload }) {
               {(["CDF", "USD"] as BulkCurrency[]).map((c) => {
                 const exec = executions.find((e) => e.currency === c);
                 if (!exec) return null;
+                const showStats =
+                  exec.status === "COMPLETED" &&
+                  (exec.successCount !== null || exec.failedCount !== null);
                 return (
                   <button
                     key={exec.id}
                     type="button"
                     onClick={() => setLogTarget(exec)}
-                    title={`View log — ${c}`}
+                    title={`View details — ${c}`}
                     className="inline-flex items-center gap-1.5 rounded-md border border-transparent px-1 py-0.5 transition hover:border-[var(--border)]"
                   >
                     <span className="text-xs font-medium text-black">{c}</span>
                     <BulkStatusBadge status={exec.status} />
-                    <FiFileText className="h-3 w-3 text-[var(--muted)]" />
+                    {showStats ? (
+                      <span className="text-xs text-[var(--muted)]">
+                        <span className="text-emerald-700">
+                          ✓ {exec.successCount ?? 0}
+                        </span>
+                        {" / "}
+                        <span className="text-red-700">
+                          ✗ {exec.failedCount ?? 0}
+                        </span>
+                      </span>
+                    ) : (
+                      <FiFileText className="h-3 w-3 text-[var(--muted)]" />
+                    )}
                   </button>
                 );
               })}

@@ -70,6 +70,28 @@ const BulkExecution = sequelize.define('BulkExecution', {
     last_log_update: {
         type: DataTypes.DATE,
         allowNull: true
+    },
+
+    success_file: {
+        type: DataTypes.STRING(500),
+        allowNull: true
+    },
+
+    failed_file: {
+        type: DataTypes.STRING(500),
+        allowNull: true
+    },
+
+    success_count: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: 0
+    },
+
+    failed_count: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: 0
     }
 
 }, {

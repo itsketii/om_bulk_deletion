@@ -9,6 +9,8 @@ export type BulkTriggeredBy = {
   role: "ADMIN" | "USER";
 };
 
+export type BulkReportKind = "success" | "failed";
+
 export type BulkExecution = {
   id: number;
   uploadId: number;
@@ -23,6 +25,12 @@ export type BulkExecution = {
   startedAt: string | null;
   completedAt: string | null;
   lastLogUpdate: string | null;
+  successFile: string | null;
+  failedFile: string | null;
+  successCount: number | null;
+  failedCount: number | null;
+  hasSuccessReport: boolean;
+  hasFailedReport: boolean;
   createdAt: string;
   updatedAt: string;
 };

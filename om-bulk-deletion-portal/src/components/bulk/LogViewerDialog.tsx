@@ -1,12 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FiRefreshCw } from "react-icons/fi";
+import toast from "react-hot-toast";
+import { FiDownload, FiRefreshCw } from "react-icons/fi";
 import { Modal } from "@/components/ui/Modal";
 import { BulkStatusBadge } from "@/components/bulk/BulkStatusBadge";
-import { getBulkExecutionLog } from "@/services/bulk.service";
+import {
+  downloadBulkReport,
+  getBulkExecutionLog,
+} from "@/services/bulk.service";
 import { formatBytes, formatDate } from "@/lib/helpers";
-import type { BulkExecution, BulkExecutionLog } from "@/types/bulk";
+import type {
+  BulkExecution,
+  BulkExecutionLog,
+  BulkReportKind,
+} from "@/types/bulk";
 
 type LogViewerDialogProps = {
   open: boolean;
@@ -25,7 +33,34 @@ export function LogViewerDialog({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [downloadingKind, setDownloadingKind] =
+    useState<BulkReportKind | null>(null);
   const scrollRef = useRef<HTMLPreElement>(null);
+
+  const handleDownloadReport = useCallback(
+    async (kind: BulkReportKind) => {
+      if (!execution) return;
+      setDownloadingKind(kind);
+      try {
+        const blob = await downloadBulkReport(execution.id, kind);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        const base = execution.logFile
+          .split(/[\\/]/)
+          .pop()
+          ?.replace(/\.log$/i, "") ?? `execution-${execution.id}`;
+        a.download = `${base}.${kind}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch {
+        toast.error(`Failed to download ${kind} report`);
+      } finally {
+        setDownloadingKind(null);
+      }
+    },
+    [execution],
+  );
 
   const fetchLog = useCallback(async () => {
     if (!execution) return;
@@ -131,6 +166,57 @@ export function LogViewerDialog({
         {error ? (
           <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
             Failed to load log
+          </div>
+        ) : null}
+
+        {execution.status === "COMPLETED" ? (
+          <div className="grid grid-cols-1 gap-3 rounded-md border border-[var(--border)] bg-zinc-50 p-3 sm:grid-cols-3">
+            <div>
+              <span className="text-[10px] uppercase tracking-wide text-[var(--muted)]">
+                Currency
+              </span>
+              <div className="mt-0.5 text-sm font-semibold text-black">
+                {execution.currency}
+              </div>
+            </div>
+            <div>
+              <span className="text-[10px] uppercase tracking-wide text-[var(--muted)]">
+                Success
+              </span>
+              <div className="mt-0.5 text-sm font-semibold text-emerald-700">
+                ✓ {execution.successCount ?? 0}
+              </div>
+            </div>
+            <div>
+              <span className="text-[10px] uppercase tracking-wide text-[var(--muted)]">
+                Failed
+              </span>
+              <div className="mt-0.5 text-sm font-semibold text-red-700">
+                ✗ {execution.failedCount ?? 0}
+              </div>
+            </div>
+            <div className="sm:col-span-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleDownloadReport("success")}
+                  disabled={downloadingKind !== null}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-white px-2.5 py-1 text-xs font-medium text-emerald-700 transition hover:border-emerald-300 disabled:opacity-60"
+                >
+                  <FiDownload className="h-3.5 w-3.5" />
+                  Success CSV
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDownloadReport("failed")}
+                  disabled={downloadingKind !== null}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-white px-2.5 py-1 text-xs font-medium text-red-700 transition hover:border-red-300 disabled:opacity-60"
+                >
+                  <FiDownload className="h-3.5 w-3.5" />
+                  Failed CSV
+                </button>
+              </div>
+            </div>
           </div>
         ) : null}
 

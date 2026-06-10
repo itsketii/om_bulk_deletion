@@ -45,4 +45,9 @@ router.get(
     bulkController.getExecutionLog
 );
 
+router.get(
+    '/:id/download/:kind',
+    bulkController.downloadExecutionReport
+);
+
 module.exports = router;

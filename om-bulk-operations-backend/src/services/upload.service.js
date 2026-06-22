@@ -14,7 +14,16 @@ const { createTxtWriter } = require('../utils/txtWriter');
 const { formatYYYYMMDD } = require('../utils/dateFormatter');
 const { generateFileName } = require('../utils/fileNameGenerator');
 const { formatMsisdn } = require('./formatter.service');
+const notificationService = require('./notification.service');
 const { FILE_TYPES } = require('../constants/fileTypes');
+const {
+    PRIVILEGED_READ_ROLES,
+    VALIDATION_ROLES,
+    VALIDATION_STATUS
+} = require('../constants/roles');
+
+const UPLOAD_DIR =
+    process.env.UPLOAD_DIR || 'storage/uploads';
 
 const GENERATED_DIR =
     process.env.GENERATED_DIR || 'storage/generated';
@@ -33,7 +42,8 @@ const processUpload = async ({ file, userId }) => {
         stored_filename: file.filename,
         status: 'PROCESSING',
         total_records: 0,
-        user_id: userId
+        user_id: userId,
+        validation_status: VALIDATION_STATUS.PENDING_VALIDATION
     });
 
     const dateString = formatYYYYMMDD(new Date());
@@ -126,7 +136,19 @@ const processUpload = async ({ file, userId }) => {
     };
 };
 
-const ADMIN_ROLE = 'ADMIN';
+const toUserSummary = (user) => {
+
+    if (!user) {
+        return null;
+    }
+
+    return {
+        id: user.id,
+        username: user.username,
+        fullname: user.fullname || null,
+        role: user.role
+    };
+};
 
 const toUploadSummary = (upload) => {
     return {
@@ -134,6 +156,13 @@ const toUploadSummary = (upload) => {
         originalFilename: upload.original_filename,
         totalRecords: upload.total_records,
         status: upload.status,
+        validationStatus: upload.validation_status || null,
+        validatedById: upload.validated_by || null,
+        validatedBy: toUserSummary(upload.validatedBy),
+        validatedAt: upload.validated_at || null,
+        validationComment: upload.validation_comment || null,
+        userId: upload.user_id || null,
+        uploader: toUserSummary(upload.User),
         createdAt: upload.createdAt,
         updatedAt: upload.updatedAt
     };
@@ -147,19 +176,31 @@ const toFileSummary = (file) => {
     };
 };
 
+const isPrivilegedRead = (role) => PRIVILEGED_READ_ROLES.includes(role);
+
+const isValidator = (role) => VALIDATION_ROLES.includes(role);
+
 const listUploads = async ({ userId, role }) => {
 
-    const uploads = role === ADMIN_ROLE
+    const uploads = isPrivilegedRead(role)
         ? await uploadRepository.findAll()
         : await uploadRepository.findAllByUserId(userId);
 
     return uploads.map(toUploadSummary);
 };
 
-const getUpload = async ({ uploadId, userId, role }) => {
+const listPendingValidation = async () => {
 
-    const upload =
-        await uploadRepository.findByIdWithFiles(uploadId);
+    const uploads = await uploadRepository.findAllByValidationStatus(
+        VALIDATION_STATUS.PENDING_VALIDATION
+    );
+
+    return uploads.map(toUploadSummary);
+};
+
+const loadUploadOrThrow = async (uploadId) => {
+
+    const upload = await uploadRepository.findByIdWithFiles(uploadId);
 
     if (!upload) {
         const error = new Error('Upload not found');
@@ -167,12 +208,16 @@ const getUpload = async ({ uploadId, userId, role }) => {
         throw error;
     }
 
-    const isOwner =
-        String(upload.user_id) === String(userId);
+    return upload;
+};
 
-    const isAdmin = role === ADMIN_ROLE;
+const getUpload = async ({ uploadId, userId, role }) => {
 
-    if (!isOwner && !isAdmin) {
+    const upload = await loadUploadOrThrow(uploadId);
+
+    const isOwner = String(upload.user_id) === String(userId);
+
+    if (!isOwner && !isPrivilegedRead(role)) {
         const error = new Error('Forbidden');
         error.statusCode = 403;
         throw error;
@@ -186,8 +231,149 @@ const getUpload = async ({ uploadId, userId, role }) => {
     };
 };
 
+const getOriginalFileForDownload = async ({ uploadId, userId, role }) => {
+
+    const upload = await loadUploadOrThrow(uploadId);
+
+    const isOwner = String(upload.user_id) === String(userId);
+
+    if (!isOwner && !isPrivilegedRead(role)) {
+        const error = new Error('Forbidden');
+        error.statusCode = 403;
+        throw error;
+    }
+
+    const absolutePath = path.resolve(
+        path.join(UPLOAD_DIR, upload.stored_filename)
+    );
+
+    if (!fs.existsSync(absolutePath)) {
+        const error = new Error('Original file no longer available');
+        error.statusCode = 410;
+        throw error;
+    }
+
+    return {
+        absolutePath,
+        filename: upload.original_filename
+    };
+};
+
+const assertValidatorRole = (role) => {
+
+    if (!isValidator(role)) {
+        const error = new Error('Forbidden');
+        error.statusCode = 403;
+        throw error;
+    }
+};
+
+const setValidationDecision = async ({
+    uploadId,
+    validatorId,
+    role,
+    decision,
+    comment
+}) => {
+
+    assertValidatorRole(role);
+
+    const upload = await loadUploadOrThrow(uploadId);
+
+    if (upload.validation_status !== VALIDATION_STATUS.PENDING_VALIDATION) {
+        const error = new Error(
+            `Upload is not pending validation (current: ${upload.validation_status})`
+        );
+        error.statusCode = 409;
+        throw error;
+    }
+
+    const trimmedComment = comment ? String(comment).trim() : null;
+
+    await uploadRepository.updateById(upload.id, {
+        validation_status: decision,
+        validated_by: validatorId,
+        validated_at: new Date(),
+        validation_comment: trimmedComment
+    });
+
+    const refreshed = await uploadRepository.findByIdWithFiles(upload.id);
+
+    await notifyUploaderOfDecision({
+        upload: refreshed,
+        decision,
+        comment: trimmedComment
+    });
+
+    return toUploadSummary(refreshed);
+};
+
+const notifyUploaderOfDecision = async ({ upload, decision, comment }) => {
+
+    if (!upload || !upload.user_id) {
+        return;
+    }
+
+    const isValidated = decision === VALIDATION_STATUS.VALIDATED;
+
+    const type = isValidated
+        ? notificationService.NOTIFICATION_TYPES.UPLOAD_VALIDATED
+        : notificationService.NOTIFICATION_TYPES.UPLOAD_REJECTED;
+
+    const title = isValidated
+        ? `Upload validated: ${upload.original_filename}`
+        : `Upload rejected: ${upload.original_filename}`;
+
+    const message = isValidated
+        ? (comment || 'Your upload has been validated and is ready for execution.')
+        : (comment || 'Your upload was rejected by the validator.');
+
+    try {
+        await notificationService.createNotification({
+            userId: upload.user_id,
+            type,
+            title,
+            message,
+            uploadId: upload.id
+        });
+    } catch (error) {
+        console.error('Failed to create validation notification:', error);
+    }
+};
+
+const validateUpload = ({ uploadId, validatorId, role, comment }) => {
+    return setValidationDecision({
+        uploadId,
+        validatorId,
+        role,
+        decision: VALIDATION_STATUS.VALIDATED,
+        comment
+    });
+};
+
+const rejectUpload = ({ uploadId, validatorId, role, comment }) => {
+
+    if (!comment || !String(comment).trim()) {
+        const error = new Error('A comment is required when rejecting');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    return setValidationDecision({
+        uploadId,
+        validatorId,
+        role,
+        decision: VALIDATION_STATUS.REJECTED,
+        comment
+    });
+};
+
 module.exports = {
     processUpload,
     listUploads,
-    getUpload
+    listPendingValidation,
+    getUpload,
+    getOriginalFileForDownload,
+    validateUpload,
+    rejectUpload
 };

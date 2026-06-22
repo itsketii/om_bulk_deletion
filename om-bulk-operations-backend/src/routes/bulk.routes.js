@@ -8,6 +8,9 @@ const authMiddleware =
 const { requireRole } =
     require('../middlewares/role.middleware');
 
+const { BULK_EXECUTION_ROLES, PRIVILEGED_READ_ROLES } =
+    require('../constants/roles');
+
 const bulkController =
     require('../controllers/bulk.controller');
 
@@ -15,13 +18,13 @@ router.use(authMiddleware);
 
 router.post(
     '/:uploadId/execute',
-    requireRole('ADMIN'),
+    requireRole(...BULK_EXECUTION_ROLES),
     bulkController.executeBulk
 );
 
 router.get(
     '/',
-    requireRole('ADMIN'),
+    requireRole(...PRIVILEGED_READ_ROLES),
     bulkController.listExecutions
 );
 

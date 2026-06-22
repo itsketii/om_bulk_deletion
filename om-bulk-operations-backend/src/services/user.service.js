@@ -4,9 +4,11 @@ const userRepository = require(
     '../repositories/user.repository'
 );
 
+const { ALL_ROLES, USER_ROLES } = require('../constants/roles');
+
 const SALT_ROUNDS = 10;
 
-const ALLOWED_ROLES = ['ADMIN', 'USER'];
+const ALLOWED_ROLES = ALL_ROLES;
 
 const toPublicUser = (user) => {
     return {
@@ -38,7 +40,7 @@ const createUser = async ({ username, fullname, email, password, role }) => {
     }
 
     const normalizedRole =
-        role && ALLOWED_ROLES.includes(role) ? role : 'USER';
+        role && ALLOWED_ROLES.includes(role) ? role : USER_ROLES.USER;
 
     const existingByUsername =
         await userRepository.findByUsername(username);

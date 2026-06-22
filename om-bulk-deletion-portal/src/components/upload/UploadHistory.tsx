@@ -7,6 +7,7 @@ import { BulkExecuteButton } from "@/components/bulk/BulkExecuteButton";
 import { BulkStatusBadge } from "@/components/bulk/BulkStatusBadge";
 import { LogViewerDialog } from "@/components/bulk/LogViewerDialog";
 import { StatusBadge } from "@/components/upload/StatusBadge";
+import { ValidationStatusBadge } from "@/components/upload/ValidationStatusBadge";
 import { useAuth } from "@/hooks/useAuth";
 import { useFiles } from "@/hooks/useFiles";
 import { formatDate } from "@/lib/helpers";
@@ -68,6 +69,7 @@ export function UploadHistory({
               <th className="px-4 py-2 font-medium">File</th>
               <th className="px-4 py-2 font-medium">Records</th>
               <th className="px-4 py-2 font-medium">Status</th>
+              <th className="px-4 py-2 font-medium">Validation</th>
               <th className="px-4 py-2 font-medium">Bulk</th>
               <th className="px-4 py-2 font-medium">Date</th>
               <th className="px-4 py-2 text-right font-medium">Actions</th>
@@ -93,7 +95,9 @@ function UploadRow({ upload }: { upload: Upload }) {
   const [loadingFiles, setLoadingFiles] = useState(false);
   const [executions, setExecutions] = useState<BulkExecution[] | null>(null);
   const [logTarget, setLogTarget] = useState<BulkExecution | null>(null);
-  const isAdmin = user?.role === "ADMIN";
+  const canExecuteBulk =
+    user?.role === "ADMIN" || user?.role === "SUPERADMIN";
+  const isValidated = upload.validationStatus === "VALIDATED";
 
   const fetchExecutions = useCallback(async () => {
     try {
@@ -159,6 +163,19 @@ function UploadRow({ upload }: { upload: Upload }) {
         <td className="px-4 py-3 text-[var(--muted)]">{upload.totalRecords}</td>
         <td className="px-4 py-3">
           <StatusBadge status={upload.status} />
+        </td>
+        <td className="px-4 py-3">
+          <div className="flex flex-col gap-1">
+            <ValidationStatusBadge status={upload.validationStatus} />
+            {upload.validationComment ? (
+              <span
+                className="max-w-[16rem] truncate text-xs text-[var(--muted)]"
+                title={upload.validationComment}
+              >
+                {upload.validationComment}
+              </span>
+            ) : null}
+          </div>
         </td>
         <td className="px-4 py-3">
           {upload.status !== "COMPLETED" ? (
@@ -227,7 +244,10 @@ function UploadRow({ upload }: { upload: Upload }) {
                     {f.type}
                   </button>
                 ))}
-                {isAdmin && (files?.length ?? 0) > 0 && !hasBlocking ? (
+                {canExecuteBulk &&
+                isValidated &&
+                (files?.length ?? 0) > 0 &&
+                !hasBlocking ? (
                   <BulkExecuteButton
                     uploadId={upload.id}
                     size="sm"
@@ -235,6 +255,16 @@ function UploadRow({ upload }: { upload: Upload }) {
                       void fetchExecutions();
                     }}
                   />
+                ) : canExecuteBulk &&
+                  !isValidated &&
+                  (files?.length ?? 0) > 0 &&
+                  !hasBlocking ? (
+                  <span
+                    className="text-xs text-[var(--muted)]"
+                    title="Awaiting validator approval"
+                  >
+                    Awaiting validation
+                  </span>
                 ) : null}
               </>
             )}

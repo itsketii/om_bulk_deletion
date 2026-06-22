@@ -23,3 +23,51 @@ export async function getUpload(id: number | string): Promise<Upload> {
   const { data } = await apiClient.get<ApiEnvelope<Upload>>(`/uploads/${id}`);
   return data.data;
 }
+
+export async function listPendingValidationUploads(): Promise<Upload[]> {
+  const { data } = await apiClient.get<ApiEnvelope<Upload[]>>(
+    "/uploads/pending-validation",
+  );
+  return data.data;
+}
+
+export async function downloadOriginalUpload(
+  id: number | string,
+  filename: string,
+): Promise<void> {
+  const response = await apiClient.get<Blob>(
+    `/uploads/${id}/download-original`,
+    { responseType: "blob" },
+  );
+  const blob = response.data as unknown as Blob;
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+}
+
+export async function validateUpload(
+  id: number | string,
+  comment?: string,
+): Promise<Upload> {
+  const { data } = await apiClient.post<ApiEnvelope<Upload>>(
+    `/uploads/${id}/validate`,
+    { comment: comment ?? null },
+  );
+  return data.data;
+}
+
+export async function rejectUpload(
+  id: number | string,
+  comment: string,
+): Promise<Upload> {
+  const { data } = await apiClient.post<ApiEnvelope<Upload>>(
+    `/uploads/${id}/reject`,
+    { comment },
+  );
+  return data.data;
+}

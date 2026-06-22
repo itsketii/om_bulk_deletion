@@ -2,6 +2,7 @@ const User = require('./User');
 const Upload = require('./Upload');
 const GeneratedFile = require('./GeneratedFiles');
 const BulkExecution = require('./BulkExecution');
+const Notification = require('./Notification');
 
 User.hasMany(Upload, {
     foreignKey: 'user_id'
@@ -36,9 +37,31 @@ BulkExecution.belongsTo(User, {
     as: 'triggeredBy'
 });
 
+Upload.belongsTo(User, {
+    foreignKey: 'validated_by',
+    as: 'validatedBy'
+});
+
+User.hasMany(Notification, {
+    foreignKey: 'user_id'
+});
+
+Notification.belongsTo(User, {
+    foreignKey: 'user_id'
+});
+
+Upload.hasMany(Notification, {
+    foreignKey: 'upload_id'
+});
+
+Notification.belongsTo(Upload, {
+    foreignKey: 'upload_id'
+});
+
 module.exports = {
     User,
     Upload,
     GeneratedFile,
-    BulkExecution
+    BulkExecution,
+    Notification
 };

@@ -26,12 +26,12 @@ export function UsersView() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user || user.role !== "ADMIN") {
+    if (!user || user.role !== "SUPERADMIN") {
       router.replace("/dashboard");
     }
   }, [authLoading, user, router]);
 
-  if (authLoading || !user || user.role !== "ADMIN") {
+  if (authLoading || !user || user.role !== "SUPERADMIN") {
     return null;
   }
 
@@ -147,15 +147,17 @@ export function UsersView() {
   );
 }
 
+const ROLE_CHIP_STYLES: Record<User["role"], string> = {
+  SUPERADMIN: "bg-black text-white ring-black",
+  ADMIN: "bg-zinc-900 text-white ring-zinc-900",
+  VALIDATOR: "bg-[var(--brand-soft)] text-black ring-[var(--brand)]",
+  USER: "bg-zinc-50 text-[var(--muted)] ring-[var(--border)]",
+};
+
 function RoleChip({ role }: { role: User["role"] }) {
-  const isAdmin = role === "ADMIN";
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${
-        isAdmin
-          ? "bg-black text-white ring-black"
-          : "bg-zinc-50 text-[var(--muted)] ring-[var(--border)]"
-      }`}
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${ROLE_CHIP_STYLES[role]}`}
     >
       {role}
     </span>

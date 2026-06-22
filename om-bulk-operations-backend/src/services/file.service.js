@@ -5,7 +5,7 @@ const generatedFileRepository = require(
     '../repositories/generatedFile.repository'
 );
 
-const ADMIN_ROLE = 'ADMIN';
+const { PRIVILEGED_READ_ROLES } = require('../constants/roles');
 
 const getDownloadableFile = async ({ fileId, userId, role }) => {
 
@@ -23,9 +23,9 @@ const getDownloadableFile = async ({ fileId, userId, role }) => {
     const isOwner =
         upload && String(upload.user_id) === String(userId);
 
-    const isAdmin = role === ADMIN_ROLE;
+    const isPrivileged = PRIVILEGED_READ_ROLES.includes(role);
 
-    if (!isOwner && !isAdmin) {
+    if (!isOwner && !isPrivileged) {
         const error = new Error('Forbidden');
         error.statusCode = 403;
         throw error;

@@ -6,6 +6,7 @@ const uploadRoutes = require('./routes/upload.routes');
 const fileRoutes = require('./routes/file.routes');
 const userRoutes = require('./routes/user.routes');
 const bulkRoutes = require('./routes/bulk.routes');
+const notificationRoutes = require('./routes/notification.routes');
 
 const app = express();
 
@@ -29,6 +30,7 @@ app.use('/api/uploads', uploadRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/bulk', bulkRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 app.use((err, req, res, next) => {
     console.error(err);

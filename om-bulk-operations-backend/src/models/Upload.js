@@ -32,6 +32,31 @@ const Upload = sequelize.define('Upload', {
             'FAILED'
         ),
         defaultValue: 'PENDING'
+    },
+
+    validation_status: {
+        type: DataTypes.ENUM(
+            'PENDING_VALIDATION',
+            'VALIDATED',
+            'REJECTED'
+        ),
+        allowNull: true,
+        defaultValue: 'PENDING_VALIDATION'
+    },
+
+    validated_by: {
+        type: DataTypes.BIGINT,
+        allowNull: true
+    },
+
+    validated_at: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
+
+    validation_comment: {
+        type: DataTypes.TEXT,
+        allowNull: true
     }
 
 }, {

@@ -19,6 +19,32 @@ export async function getProfile(): Promise<User> {
   return data.data;
 }
 
+export type UpdateProfilePayload = {
+  fullname?: string | null;
+  email?: string;
+};
+
+export async function updateProfile(
+  payload: UpdateProfilePayload,
+): Promise<User> {
+  const { data } = await apiClient.patch<ApiEnvelope<User>>(
+    "/auth/profile",
+    payload,
+  );
+  return data.data;
+}
+
+export type ChangePasswordPayload = {
+  currentPassword: string;
+  newPassword: string;
+};
+
+export async function changePassword(
+  payload: ChangePasswordPayload,
+): Promise<void> {
+  await apiClient.post<ApiEnvelope<User>>("/auth/change-password", payload);
+}
+
 export async function logout(): Promise<void> {
   // No backend endpoint yet; client-side token clearing is handled in the store.
 }

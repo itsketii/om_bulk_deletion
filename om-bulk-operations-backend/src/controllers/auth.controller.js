@@ -88,8 +88,56 @@ const profile = async (req, res, next) => {
     }
 };
 
+const updateProfile = async (req, res, next) => {
+
+    try {
+
+        const { fullname, email } = req.body || {};
+
+        const user = await authService.updateProfile({
+            userId: req.user.id,
+            fullname,
+            email
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Profile updated',
+            data: user
+        });
+
+    } catch (error) {
+        return handleServiceError(error, res, next);
+    }
+};
+
+const changePassword = async (req, res, next) => {
+
+    try {
+
+        const { currentPassword, newPassword } = req.body || {};
+
+        const user = await authService.changePassword({
+            userId: req.user.id,
+            currentPassword,
+            newPassword
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Password changed',
+            data: user
+        });
+
+    } catch (error) {
+        return handleServiceError(error, res, next);
+    }
+};
+
 module.exports = {
     register,
     login,
-    profile
+    profile,
+    updateProfile,
+    changePassword
 };

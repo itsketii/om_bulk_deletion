@@ -8,9 +8,10 @@ const bcrypt = require('bcryptjs');
 const sequelize = require('../src/config/database');
 const { User } = require('../src/models');
 
-const ADMIN_USERNAME = 'admin';
-const ADMIN_FULLNAME = 'Administrator';
-const ADMIN_EMAIL = 'admin@local';
+const ADMIN_USERNAME = 'superadmin';
+const ADMIN_FULLNAME = 'Super Administrator';
+const ADMIN_EMAIL = 'superadmin@local';
+const ADMIN_ROLE = 'SUPERADMIN';
 
 const CREDENTIALS_FILE = path.join(
     __dirname,
@@ -86,7 +87,7 @@ const writeCredentialsFile = (password) => {
             fullname: ADMIN_FULLNAME,
             email: ADMIN_EMAIL,
             password: hashedPassword,
-            role: 'ADMIN'
+            role: ADMIN_ROLE
         });
 
         writeCredentialsFile(plainPassword);

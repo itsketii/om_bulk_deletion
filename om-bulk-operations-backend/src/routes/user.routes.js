@@ -14,8 +14,12 @@ const { requireRole } = require(
     '../middlewares/role.middleware'
 );
 
+const { USER_MANAGEMENT_ROLES } = require(
+    '../constants/roles'
+);
+
 router.use(authMiddleware);
-router.use(requireRole('ADMIN'));
+router.use(requireRole(...USER_MANAGEMENT_ROLES));
 
 router.get(
     '/',

@@ -8,26 +8,53 @@ const upload =
 const authMiddleware =
     require('../middlewares/auth.middleware');
 
+const { requireRole } =
+    require('../middlewares/role.middleware');
+
+const { VALIDATION_ROLES } = require('../constants/roles');
+
 const uploadController =
     require('../controllers/upload.controller');
 
+router.use(authMiddleware);
+
 router.post(
     '/',
-    authMiddleware,
     upload.single('file'),
     uploadController.uploadFile
 );
 
 router.get(
     '/',
-    authMiddleware,
     uploadController.listUploads
 );
 
 router.get(
+    '/pending-validation',
+    requireRole(...VALIDATION_ROLES),
+    uploadController.listPendingValidation
+);
+
+router.get(
     '/:id',
-    authMiddleware,
     uploadController.getUpload
+);
+
+router.get(
+    '/:id/download-original',
+    uploadController.downloadOriginal
+);
+
+router.post(
+    '/:id/validate',
+    requireRole(...VALIDATION_ROLES),
+    uploadController.validateUpload
+);
+
+router.post(
+    '/:id/reject',
+    requireRole(...VALIDATION_ROLES),
+    uploadController.rejectUpload
 );
 
 module.exports = router;

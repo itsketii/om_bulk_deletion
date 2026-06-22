@@ -19,14 +19,16 @@ export function BulkView() {
   });
   const [logTarget, setLogTarget] = useState<BulkExecution | null>(null);
 
+  const canAccess = user?.role === "SUPERADMIN" || user?.role === "ADMIN";
+
   useEffect(() => {
     if (authLoading) return;
-    if (!user || user.role !== "ADMIN") {
+    if (!user || !canAccess) {
       router.replace("/dashboard");
     }
-  }, [authLoading, user, router]);
+  }, [authLoading, user, canAccess, router]);
 
-  if (authLoading || !user || user.role !== "ADMIN") {
+  if (authLoading || !user || !canAccess) {
     return null;
   }
 

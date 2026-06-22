@@ -22,6 +22,11 @@ const {
     LOG_TAIL_BYTES
 } = require('../constants/bulkExecution');
 
+const {
+    PRIVILEGED_READ_ROLES,
+    VALIDATION_STATUS
+} = require('../constants/roles');
+
 const { FILE_TYPES } = require('../constants/fileTypes');
 
 const ensureDir = async (dirPath) => {
@@ -134,8 +139,6 @@ const runForCurrency = async ({ upload, currency, file, triggeredBy }) => {
     }
 };
 
-const ADMIN_ROLE = 'ADMIN';
-
 const BLOCKING_EXECUTION_STATUSES = [
     BULK_STATUS.PENDING,
     BULK_STATUS.RUNNING,
@@ -144,7 +147,7 @@ const BLOCKING_EXECUTION_STATUSES = [
 
 const assertOwnership = ({ upload, userId, role }) => {
 
-    if (role === ADMIN_ROLE) {
+    if (PRIVILEGED_READ_ROLES.includes(role)) {
         return;
     }
 
@@ -171,6 +174,14 @@ const executeBulk = async ({ uploadId, userId }) => {
             'Upload is not in COMPLETED state'
         );
         error.statusCode = 400;
+        throw error;
+    }
+
+    if (upload.validation_status !== VALIDATION_STATUS.VALIDATED) {
+        const error = new Error(
+            'Upload must be validated before a bulk run can be triggered'
+        );
+        error.statusCode = 409;
         throw error;
     }
 

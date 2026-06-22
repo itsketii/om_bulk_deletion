@@ -1,4 +1,15 @@
-const { Upload, GeneratedFile } = require('../models');
+const { Upload, GeneratedFile, User } = require('../models');
+
+const UPLOADER_INCLUDE = {
+    model: User,
+    attributes: ['id', 'username', 'fullname', 'role']
+};
+
+const VALIDATED_BY_INCLUDE = {
+    model: User,
+    as: 'validatedBy',
+    attributes: ['id', 'username', 'fullname', 'role']
+};
 
 const create = (data) => {
     return Upload.create(data);
@@ -10,12 +21,17 @@ const findById = (id) => {
 
 const findByIdWithFiles = (id) => {
     return Upload.findByPk(id, {
-        include: [{ model: GeneratedFile }]
+        include: [
+            { model: GeneratedFile },
+            UPLOADER_INCLUDE,
+            VALIDATED_BY_INCLUDE
+        ]
     });
 };
 
 const findAll = () => {
     return Upload.findAll({
+        include: [UPLOADER_INCLUDE, VALIDATED_BY_INCLUDE],
         order: [['createdAt', 'DESC']]
     });
 };
@@ -23,6 +39,15 @@ const findAll = () => {
 const findAllByUserId = (userId) => {
     return Upload.findAll({
         where: { user_id: userId },
+        include: [UPLOADER_INCLUDE, VALIDATED_BY_INCLUDE],
+        order: [['createdAt', 'DESC']]
+    });
+};
+
+const findAllByValidationStatus = (validationStatus) => {
+    return Upload.findAll({
+        where: { validation_status: validationStatus },
+        include: [UPLOADER_INCLUDE, VALIDATED_BY_INCLUDE],
         order: [['createdAt', 'DESC']]
     });
 };
@@ -42,5 +67,6 @@ module.exports = {
     findByIdWithFiles,
     findAll,
     findAllByUserId,
+    findAllByValidationStatus,
     updateById
 };

@@ -101,7 +101,7 @@ export function UploadForm({ onUploaded }: UploadFormProps) {
         <FiUploadCloud className="h-8 w-8 text-[var(--brand)]" />
         <div className="flex flex-col gap-1">
           <span className="text-sm font-medium text-black">
-            Drop an Excel file, or click to browse
+            Drop an Excel or CSV file, or click to browse
           </span>
           <span className="text-xs text-[var(--muted)]">
             {ACCEPTED_UPLOAD_EXTENSIONS.join(", ")} · up to{" "}

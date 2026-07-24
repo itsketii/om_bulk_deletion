@@ -3,7 +3,7 @@ export const API_BASE_URL =
 
 export const AUTH_TOKEN_COOKIE = "om_auth_token";
 
-export const ACCEPTED_UPLOAD_EXTENSIONS = [".xlsx", ".xls"] as const;
+export const ACCEPTED_UPLOAD_EXTENSIONS = [".xlsx", ".xls", ".csv"] as const;
 
 export const MAX_UPLOAD_BYTES = 500 * 1024 * 1024;
 

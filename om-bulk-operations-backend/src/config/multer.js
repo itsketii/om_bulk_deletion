@@ -33,7 +33,8 @@ const fileFilter = (req, file, cb) => {
 
     const allowedExtensions = [
         '.xlsx',
-        '.xls'
+        '.xls',
+        '.csv'
     ];
 
     const extension = path.extname(
@@ -44,7 +45,7 @@ const fileFilter = (req, file, cb) => {
 
         return cb(
             new Error(
-                'Only Excel files (.xlsx, .xls) are allowed'
+                'Only Excel or CSV files (.xlsx, .xls, .csv) are allowed'
             ),
             false
         );

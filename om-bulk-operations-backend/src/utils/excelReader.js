@@ -1,12 +1,20 @@
+const path = require('path');
 const ExcelJS = require('exceljs');
 
 const streamFirstColumn = async function* (filePath) {
 
     const workbook = new ExcelJS.Workbook();
 
-    await workbook.xlsx.readFile(filePath);
+    const extension = path.extname(filePath).toLowerCase();
 
-    const worksheet = workbook.worksheets[0];
+    let worksheet;
+
+    if (extension === '.csv') {
+        worksheet = await workbook.csv.readFile(filePath);
+    } else {
+        await workbook.xlsx.readFile(filePath);
+        worksheet = workbook.worksheets[0];
+    }
 
     if (!worksheet) {
         return;

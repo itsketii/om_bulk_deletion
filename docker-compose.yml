@@ -1,0 +1,83 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: om-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: om_bulk_operations_backend_db
+      MYSQL_USER: app_user
+      MYSQL_PASSWORD: app_password
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_password"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: om-phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "8080:80"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  backend:
+    build:
+      context: ./om-bulk-operations-backend
+      dockerfile: Dockerfile.dev
+    container_name: om-backend
+    restart: unless-stopped
+    environment:
+      PORT: 3001
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: om_bulk_operations_backend_db
+      DB_USER: app_user
+      DB_PASSWORD: app_password
+      JWT_SECRET: 7758c1ae1fc462b6
+      JWT_EXPIRES_IN: 8h
+      UPLOAD_DIR: storage/uploads
+      GENERATED_DIR: storage/generated
+      USE_QUEUE: "false"
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./om-bulk-operations-backend:/app
+      - backend_node_modules:/app/node_modules
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./om-bulk-deletion-portal
+      dockerfile: Dockerfile.dev
+    container_name: om-frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:3001/api
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./om-bulk-deletion-portal:/app
+      - frontend_node_modules:/app/node_modules
+      - frontend_next:/app/.next
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
+  backend_node_modules:
+  frontend_node_modules:
+  frontend_next:
